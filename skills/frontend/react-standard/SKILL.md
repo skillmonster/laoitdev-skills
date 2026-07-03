@@ -1,5 +1,5 @@
 ---
-name: frontend-standard
+name: react-standard
 description: "Core frontend coding standards for React + TypeScript projects using MUI, TanStack libraries, i18next, and Zod. Use this whenever writing any new component, hook, service, type, or utility — or when reviewing existing code for consistency. Covers naming conventions, file structure, TypeScript patterns, i18n, error handling, and import aliases."
 ---
 

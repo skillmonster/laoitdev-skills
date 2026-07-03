@@ -1,5 +1,5 @@
 ---
-name: frontend-table-mrt
+name: table-mrt
 description: "How to build data tables using the DataTable component (Material React Table wrapper). Use this whenever creating a list/table view for a feature. Covers column definitions, server-side pagination, row actions menu, row selection for batch operations, custom top toolbar, and loading/error states."
 ---
 
