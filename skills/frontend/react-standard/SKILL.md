@@ -1,5 +1,5 @@
 ---
-name: react-standard
+name: frontend-standard
 description: "Core frontend coding standards for React + TypeScript projects using MUI, TanStack libraries, i18next, and Zod. Use this whenever writing any new component, hook, service, type, or utility — or when reviewing existing code for consistency. Covers naming conventions, file structure, TypeScript patterns, i18n, error handling, and import aliases."
 ---
 
@@ -10,6 +10,7 @@ description: "Core frontend coding standards for React + TypeScript projects usi
 | Concern | Library |
 |---|---|
 | UI | MUI v9 (Material UI) |
+| Tables | `material-react-table` v3 (via shared `DataTable` wrapper) |
 | Styling engine | `@emotion/react` + `@emotion/styled` (required MUI peer deps) |
 | Routing | TanStack Router (file-based) |
 | Data fetching | TanStack Query v5 |
