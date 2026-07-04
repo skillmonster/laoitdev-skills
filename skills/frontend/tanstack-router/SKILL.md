@@ -8,6 +8,10 @@ description: "How to use TanStack Router for file-based routing. Use this whenev
 ## Core Invariants (always enforced — never violate)
 
 - Never manually edit `src/routeTree.gen.ts` — it is auto-generated; commit it, don't hand-edit it.
+- **Routes are global** — all route files live in `src/routes/`. Never create route files inside feature folders.
+- **Search schemas never inline in route files** — always import them from `features/[feature]/schemas/[feature].schema.ts`.
+- Inside a route component, always use `Route.useSearch()`, `Route.useNavigate()`, and `Route.useParams()` — never the bare hooks without `from`.
+- Every `beforeLoad` on a layout route must return `{ breadcrumb: '...' }` (except redirect-only routes that only `throw redirect`).
 
 ## References
 
@@ -25,12 +29,13 @@ Read the relevant file when you need it:
 
 ```ts
 // vite.config.ts
+import { defineConfig } from 'vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [
-    tanstackRouter({ target: 'react', autoCodeSplitting: true }),
+    tanstackRouter({ target: 'react', autoCodeSplitting: true }), // must come before react()
     react(),
   ],
 })
@@ -41,7 +46,7 @@ export default defineConfig({
 ### CLI (CI / without dev server)
 
 ```bash
-bun add -D @tanstack/router-cli
+bun add -d @tanstack/router-cli
 bunx tsr generate   # one-shot before build/type-check
 bunx tsr watch      # continuous watch
 ```
@@ -78,23 +83,56 @@ src/routes/
                 └── edit.tsx       # /your-section/your-feature/$featureId/edit
 ```
 
-`_` prefix = pathless layout (no URL segment). `$param` = dynamic segment.
+`_` prefix = pathless layout (no URL segment). `$param` = dynamic segment. Always use nested directories — never dot notation (flat routes).
+
+---
+
+## Search Schema Pattern
+
+Search schemas belong in the feature's schema file — **never inline in a route file**.
+
+```ts
+// features/your-feature/schemas/your-feature.schema.ts
+import { fallback } from '@tanstack/zod-adapter'
+
+export const yourFeatureSearchSchema = z.object({
+  page: fallback(z.number(), 1).default(1),
+  page_size: fallback(z.number(), 20).default(20),
+  search: z.string().optional(),
+  status: z.string().optional(),
+  sort_by: z.string().optional(),
+  sort_order: z.string().optional(),
+})
+
+export type YourFeatureSearch = z.infer<typeof yourFeatureSearchSchema>
+```
+
+Use `fallback(z.number(), defaultValue).default(defaultValue)` for fields that need a fallback when the URL param is missing or invalid. Plain `.optional()` is fine for truly optional filters.
+
+Wire up in the route file by importing and passing directly:
+
+```ts
+import { zodValidator } from '@tanstack/zod-adapter'
+import { yourFeatureSearchSchema } from '@/features/your-feature/schemas/your-feature.schema'
+
+validateSearch: zodValidator(yourFeatureSearchSchema)
+```
 
 ---
 
 ## Creating Route Files
 
-### List Page (with search params)
+### List Page
 
 ```tsx
 // src/routes/_layout/your-section/your-feature/index.tsx
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
-import { getFeatureSearchSchema } from '@/features/your-feature/schemas/your-feature.schema'
+import { yourFeatureSearchSchema } from '@/features/your-feature/schemas/your-feature.schema'
 import { guardRoute } from '@/shared/utils/route-guard.util'
 
 export const Route = createFileRoute('/_layout/your-section/your-feature/')({
-  validateSearch: zodValidator(getFeatureSearchSchema()),
+  validateSearch: zodValidator(yourFeatureSearchSchema),
   beforeLoad: ({ context }) => {
     guardRoute(context.user, ['feature-index'])
     return { breadcrumb: 'breadcrumbs.features' }
@@ -103,32 +141,67 @@ export const Route = createFileRoute('/_layout/your-section/your-feature/')({
 })
 
 function FeaturePage() {
+  const { t } = useTranslation()
   const searchParams = Route.useSearch()
-  const { data, isLoading } = useYourFeatures(searchParams)
+  const navigate = Route.useNavigate()
+
+  const handlePageChange = (page: number) => {
+    navigate({ search: (prev) => ({ ...prev, page }) })
+  }
+
+  const handlePageSizeChange = (pageSize: number) => {
+    navigate({ search: (prev) => ({ ...prev, page: 1, page_size: pageSize }) })
+  }
 
   return (
-    <Container maxWidth="xl">
-      <Button component={Link} to="/your-section/your-feature/create" variant="contained">
-        {t('feature.create')}
-      </Button>
-      <FeatureList searchParams={searchParams} data={data?.items} total={data?.total} isLoading={isLoading} />
+    <Container maxWidth="xl" sx={{ p: 0 }}>
+      {/* header, filters, list */}
     </Container>
   )
+}
+```
+
+### Create Page
+
+```tsx
+// src/routes/_layout/your-section/your-feature/create.tsx
+import { createFileRoute } from '@tanstack/react-router'
+import { FeatureForm } from '@/features/your-feature/components/FeatureForm'
+import { guardRoute } from '@/shared/utils/route-guard.util'
+
+export const Route = createFileRoute('/_layout/your-section/your-feature/create')({
+  beforeLoad: ({ context }) => {
+    guardRoute(context.user, ['feature-add'])
+    return { breadcrumb: 'breadcrumbs.createFeature' }
+  },
+  component: FeatureCreatePage,
+})
+
+function FeatureCreatePage() {
+  return <FeatureForm />
 }
 ```
 
 ### Detail Page (with loader prefetch)
 
 ```tsx
+// src/routes/_layout/your-section/your-feature/$featureId/index.tsx
+import { createFileRoute } from '@tanstack/react-router'
+import { FeatureDetail } from '@/features/your-feature/components/FeatureDetail'
+import { YOUR_FEATURE_QUERY_KEYS } from '@/features/your-feature/constants/query-keys'
+import { yourFeatureService } from '@/features/your-feature/services/your-feature.service'
+import { guardRoute } from '@/shared/utils/route-guard.util'
+
 export const Route = createFileRoute('/_layout/your-section/your-feature/$featureId/')({
   beforeLoad: ({ context }) => {
     guardRoute(context.user, ['feature-index'])
     return { breadcrumb: 'breadcrumbs.featureDetail' }
   },
   loader: async ({ params, context }) => {
+    const id = Number(params.featureId)
     await context.queryClient.ensureQueryData({
-      queryKey: YOUR_FEATURE_QUERY_KEYS.detail(Number(params.featureId)),
-      queryFn: ({ signal }) => yourFeatureService.getById(Number(params.featureId), signal),
+      queryKey: YOUR_FEATURE_QUERY_KEYS.DETAIL(id),
+      queryFn: ({ signal }) => yourFeatureService.getById(id, signal),
     })
   },
   component: FeatureDetailPage,
@@ -136,97 +209,81 @@ export const Route = createFileRoute('/_layout/your-section/your-feature/$featur
 
 function FeatureDetailPage() {
   const { featureId } = Route.useParams()
-  const { data, isLoading, error } = useYourFeature(Number(featureId))
-  return <FeatureDetail feature={data?.item} isLoading={isLoading} error={error} />
+  return <FeatureDetail featureId={Number(featureId)} />
 }
 ```
 
 ### Edit Page
 
 ```tsx
+// src/routes/_layout/your-section/your-feature/$featureId/edit.tsx
+import { createFileRoute } from '@tanstack/react-router'
+import { FeatureEditForm } from '@/features/your-feature/components/FeatureEditForm'
+import { YOUR_FEATURE_QUERY_KEYS } from '@/features/your-feature/constants/query-keys'
+import { yourFeatureService } from '@/features/your-feature/services/your-feature.service'
+import { guardRoute } from '@/shared/utils/route-guard.util'
+
 export const Route = createFileRoute('/_layout/your-section/your-feature/$featureId/edit')({
   beforeLoad: ({ context }) => {
     guardRoute(context.user, ['feature-edit'])
     return { breadcrumb: 'breadcrumbs.editFeature' }
   },
-  component: () => <FeatureUpdateForm />,
-})
-```
-
----
-
-## Search Params Validation
-
-```ts
-// features/your-feature/schemas/your-feature.schema.ts
-export const getFeatureSearchSchema = () => z.object({
-  page: z.number().min(1).catch(1),
-  page_size: z.number().min(1).max(100).catch(20),
-  search: z.string().optional(),
-  status: z.enum(['active', 'inactive']).optional(),
-  sort_by: z.string().optional(),
-  sort_order: z.enum(['asc', 'desc']).optional(),
+  loader: async ({ params, context }) => {
+    const id = Number(params.featureId)
+    await context.queryClient.ensureQueryData({
+      queryKey: YOUR_FEATURE_QUERY_KEYS.DETAIL(id),
+      queryFn: ({ signal }) => yourFeatureService.getById(id, signal),
+    })
+  },
+  component: FeatureEditPage,
 })
 
-export type FeatureSearch = z.infer<ReturnType<typeof getFeatureSearchSchema>>
-```
-
-Wire up in route:
-```ts
-import { zodValidator } from '@tanstack/zod-adapter'
-validateSearch: zodValidator(getFeatureSearchSchema())
+function FeatureEditPage() {
+  const { featureId } = Route.useParams()
+  return <FeatureEditForm featureId={Number(featureId)} />
+}
 ```
 
 ---
 
 ## Navigation Hooks
 
-### useNavigate
+### Inside a route file — always use `Route.*` variants
 
 ```tsx
-const navigate = useNavigate({ from: '/_layout/section/feature/' })
-
-navigate({ search: (prev) => ({ ...prev, page: newPage }) })   // update search
-navigate({ to: '/section/feature/$featureId', params: { featureId: String(id) } })
-navigate({ to: '/section/feature' })
-```
-
-### Route.useNavigate (preferred in list routes — fully typed)
-
-```tsx
-const navigate = Route.useNavigate()
-navigate({ search: (prev) => ({ ...prev, status: 'active' }) })
-```
-
-### useSearch — three modes
-
-```tsx
-// 1. Inside route file — no args
+// search params
 const searchParams = Route.useSearch()
 
-// 2. In a feature component — pass from (strict mode, recommended)
-const searchParams = useSearch({ from: '/_layout/section/feature/' })
-//   from must match the route id in routeTree.gen.ts exactly (include trailing slash for index routes)
+// navigate
+const navigate = Route.useNavigate()
+navigate({ search: (prev) => ({ ...prev, page: newPage }) })
+navigate({ to: '/section/feature/$featureId', params: { featureId: String(id) } })
+navigate({ to: '/section/feature' })
 
-// 3. Non-strict — renders under multiple routes (broad type, avoid for single-route components)
+// params
+const { featureId } = Route.useParams()
+```
+
+Never use bare `useNavigate()`, `useSearch({ from })`, or `useParams({ from })` inside the route component function — those are for feature components outside the route file.
+
+### Inside feature components (outside route file)
+
+```tsx
+// strict mode — preferred for single-route components
+const searchParams = useSearch({ from: '/_layout/section/feature/' })
+const { featureId } = useParams({ from: '/_layout/section/feature/$featureId/' })
+
+// non-strict — use only when a component renders under multiple routes
 const searchParams = useSearch({ strict: false })
 
 // select — re-renders only when selection changes
 const page = useSearch({ from: '/_layout/section/feature/', select: (s) => s.page })
 ```
 
-### useParams
-
-```tsx
-const { featureId } = Route.useParams()                                           // in route file
-const { featureId } = useParams({ from: '/_layout/section/feature/$featureId/' }) // outside route file
-const { featureId } = useParams({ strict: false })                                // non-strict
-```
-
 ### Link
 
 ```tsx
-<Button component={Link} to="/section/feature/create">Create</Button>
+<Button component={Link} to="/section/feature/create" variant="contained">Create</Button>
 <Link to="/section/feature/$featureId" params={{ featureId: '123' }}>View</Link>
 ```
 
@@ -236,11 +293,19 @@ const { featureId } = useParams({ strict: false })                              
 
 ```ts
 // core/config/router.config.ts
+import { createRouter } from '@tanstack/react-router'
+import { routeTree } from '@/routeTree.gen'
+import { queryClient } from './query-client.config'
+import type { RouterContext } from '@/routes/__root'
+
 export const router = createRouter({
   routeTree,
   defaultPreload: 'intent',
   scrollRestoration: true,
-  context: { queryClient, user: undefined },
+  context: {
+    queryClient,
+    user: undefined,
+  } as RouterContext,
 })
 
 declare module '@tanstack/react-router' {

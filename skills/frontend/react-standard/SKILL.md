@@ -9,6 +9,22 @@ description: "Core frontend coding standards for React + TypeScript projects usi
 
 - Always use `useTranslation()` for user-visible strings — never hardcode them.
 - Use named exports, not default exports, for everything except route components.
+- **Route files live only in `src/routes/`** — never create route files inside `features/`.
+- **Use `bun` for all package installation** — never `npm`, `yarn`, or `pnpm`.
+
+## Package Manager
+
+This project uses **bun** exclusively. Always use `bun` for all package operations:
+
+```bash
+bun add <package>          # install a dependency
+bun add -d <package>       # install a dev dependency
+bun install                # install all dependencies from lockfile
+bun run <script>           # run a package.json script
+bunx <cli>                 # run a package binary without installing globally
+```
+
+Never use `npm`, `yarn`, or `pnpm`.
 
 ## Tech Stack
 
@@ -26,8 +42,8 @@ description: "Core frontend coding standards for React + TypeScript projects usi
 | Date | Day.js (via MUI `LocalizationProvider` with `AdapterDayjs`) |
 
 > **MUI v9 requires both `@emotion/react` and `@emotion/styled` as peer dependencies.** Always install them together:
-> ```
-> @mui/material @emotion/react @emotion/styled
+> ```bash
+> bun add @mui/material @emotion/react @emotion/styled
 > ```
 
 ## TypeScript
@@ -46,7 +62,7 @@ description: "Core frontend coding standards for React + TypeScript projects usi
 - **Types**: PascalCase (`Electricity`, `ElectricityFilterParams`)
 - **Constants**: SCREAMING_SNAKE_CASE for values, PascalCase for option arrays (`ELECTRICITY_ENDPOINTS`, `USER_USING_TYPES`)
 - **Files**: kebab-case (`electricity.service.ts`, `useElectricities.ts`)
-- **Route files**: kebab-case directories, `index.tsx` for list pages, `$paramId/index.tsx` for detail, `$paramId/edit.tsx` for edit
+- **Route files**: live in `src/routes/_layout/section/feature/` only — kebab-case directories, `index.tsx` for list, `create.tsx` for create, `$paramId/index.tsx` for detail, `$paramId/edit.tsx` for edit
 
 ## Imports
 
@@ -123,4 +139,4 @@ Prefer shared components over re-implementing:
 - `InfoRow` — label/value pair inside SectionCard
 - `OrganizationFilter` — org hierarchy filter UI
 - `ConfirmDialog` / `useConfirmDialog` — confirmation modals
-- Form components via `useAppForm` (see tanstack-form skill)
+- Form components via `useAppForm` (see frontend-tanstack-form skill)
