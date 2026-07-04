@@ -36,7 +36,7 @@ Load the skills that apply to what you're auditing. Don't load all of them — l
 | Table, list view, columns | `frontend-table-mrt` |
 | `useQuery`, `useMutation`, API calls | `frontend-tanstack-query` |
 | Route files, `createFileRoute`, navigation | `frontend-tanstack-router` |
-| `src/core/` files, providers, interceptors | `frontend-core` |
+| `src/core/` files, providers, interceptors | `react-core` |
 | Colors, `sx` props, `SectionCard`, `InfoRow` | `frontend-theme` |
 | Detail/view page (single item display) | `frontend-detail-page` |
 | Feature folder structure, file placement | `frontend-feature-architecture` |

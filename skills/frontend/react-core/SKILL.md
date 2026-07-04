@@ -1,6 +1,57 @@
 ---
 name: react-core
-description: "How to implement the src/core folder — app-level infrastructure shared by every feature. Covers folder structure, Axios config with auth interceptors, QueryClient, router config, i18n setup, theme, AuthContext, SnackbarContext, ThemeContext, type-safe storage utility, Zustand layout store, and main.tsx provider composition. Use whenever setting up a new project, adding a new core concern, or modifying any of these foundational files."
+description: "How to scaffold a new Vite + React + TypeScript project with bun and implement the src/core folder — app-level infrastructure shared by every feature. Covers project setup, @ alias, folder structure, Axios config with auth interceptors, QueryClient, router config, i18n setup, theme, AuthContext, SnackbarContext, ThemeContext, type-safe storage utility, Zustand layout store, and main.tsx provider composition. Use whenever setting up a new project, adding a new core concern, or modifying any of these foundational files."
+---
+
+## Project Setup (Vite + React + TypeScript + Bun)
+
+### 1. Scaffold
+
+```bash
+bun create vite my-app --template react-ts
+cd my-app
+bun install
+bun add -d @types/node   # needed for path.resolve in vite.config.ts
+```
+
+### 2. `vite.config.ts` — configure `@` alias
+
+```ts
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import { resolve } from 'path'
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, './src'),
+    },
+  },
+})
+```
+
+### 3. `tsconfig.app.json` — add paths so TypeScript and IDEs resolve `@`
+
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}
+```
+
+> The Vite react-ts template splits compiler options across `tsconfig.json` (references root) and `tsconfig.app.json` (the actual app config). Add `baseUrl` and `paths` to **`tsconfig.app.json`**.
+
+### 4. Dev server
+
+```bash
+bun run dev
+```
+
 ---
 
 # Core Folder
@@ -105,7 +156,7 @@ export const queryClient = new QueryClient({
 
 ## `core/router/index.tsx`
 
-Route tree generation config → see `tanstack-router` skill.
+Route tree generation config → see `frontend-tanstack-router` skill.
 
 ```ts
 import { createRouter as createTanStackRouter } from '@tanstack/react-router'
