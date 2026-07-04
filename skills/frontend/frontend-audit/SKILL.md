@@ -32,14 +32,14 @@ Load the skills that apply to what you're auditing. Don't load all of them — l
 
 | If you see... | Read skill |
 |---|---|
-| Form components, `useForm`, field inputs | `tanstack-form` |
-| Table, list view, columns | `table-mrt` |
-| `useQuery`, `useMutation`, API calls | `tanstack-query` |
-| Route files, `createFileRoute`, navigation | `tanstack-router` |
-| `src/core/` files, providers, interceptors | `react-core` |
-| Colors, `sx` props, `SectionCard`, `InfoRow` | `mui-theme` |
+| Form components, `useForm`, field inputs | `frontend-tanstack-form` |
+| Table, list view, columns | `frontend-table-mrt` |
+| `useQuery`, `useMutation`, API calls | `frontend-tanstack-query` |
+| Route files, `createFileRoute`, navigation | `frontend-tanstack-router` |
+| `src/core/` files, providers, interceptors | `frontend-core` |
+| Colors, `sx` props, `SectionCard`, `InfoRow` | `frontend-theme` |
 | Detail/view page (single item display) | `frontend-detail-page` |
-| Feature folder structure, file placement | `feature-architecture` |
+| Feature folder structure, file placement | `frontend-feature-architecture` |
 | `t()`, `useTranslation`, translation keys, Zod messages, API errors | `frontend-i18n` |
 | Any component at all | `react-standard` |
 
@@ -62,7 +62,7 @@ If the user provided a Figma link, screenshot, or mockup:
 3. **Typography** — Are text styles using MUI variant tokens (`h5`, `body1`, `caption`, etc.)?
 4. **Component fidelity** — Does the rendered output closely match the design? Note any missing UI elements.
 
-Reference the `mui-theme` skill for the exact palette tokens when reporting violations.
+Reference the `frontend-theme` skill for the exact palette tokens when reporting violations.
 
 ### Step 5: Implementation Audit
 
@@ -72,7 +72,7 @@ Check each relevant category. For each finding, note:
 - **What it should be** — and which skill to follow
 
 #### Architecture
-Read `feature-architecture`. Check:
+Read `frontend-feature-architecture`. Check:
 - **No route files inside `features/`** — route files (`createFileRoute`) belong only in `src/routes/`
 - Files are in the correct subfolder (`components/`, `hooks/`, `services/`, `types/`, `schemas/`, `constants/`, `utils/`)
 - Component names match their role (e.g., `FeatureList.tsx`, `FeatureForm.tsx`, `FeatureDetail.tsx`)
@@ -88,18 +88,18 @@ Read `react-standard`. Check:
 - Import aliases used (`@/shared`, `@/features`, etc.)
 
 #### Theme & UI
-Read `mui-theme`. Check:
+Read `frontend-theme`. Check:
 - Colors use `theme.palette` tokens, not hardcoded hex
 - `SectionCard` and `InfoRow` used for detail/info layouts
 - Dark mode not broken (no hardcoded colors that don't invert)
-- MUI Grid uses `size` prop — flag as **Warning** if code uses legacy syntax:
-  - `xs`/`sm`/`md`/`lg`/`xl` props directly on `<Grid>`
-  - `item` prop on `<Grid>`
-  - `Grid2` import from `@mui/material/Grid2`
-  - Fix: replace with `size={{ ... }}`. See: `react-standard` skill.
+- MUI Grid uses `size` prop — flag as **Error** for any of these (Grid2 is deprecated and removed in MUI v9):
+  - `Grid2` import (`import Grid2 from '@mui/material/Grid2'` or `import { Grid2 }`) — replace with `import { Grid } from '@mui/material'`
+  - `xs`/`sm`/`md`/`lg`/`xl` props directly on `<Grid>` — replace with `size={{ xs: ..., md: ... }}`
+  - `item` prop on `<Grid>` — remove it, use `size` prop instead
+  - Fix: `<Grid size={{ xs: 12, md: 6 }}>`. See: `react-standard` skill.
 
 #### Forms
-Read `tanstack-form`. Check:
+Read `frontend-tanstack-form`. Check:
 - Uses `useAppForm`, not raw `useForm`
 - Field components are `App*` variants (`AppTextField`, `AppSelect`, etc.)
 - Submit uses `<form.SubmitButton>`, not a raw MUI `<Button type="submit">`
@@ -107,21 +107,21 @@ Read `tanstack-form`. Check:
 - Zod schema is defined and passed as `validators`
 
 #### Tables
-Read `table-mrt`. Check:
+Read `frontend-table-mrt`. Check:
 - Uses `DataTable` wrapper from `@/shared/components/DataTable`, not raw `MaterialReactTable`
 - Column definitions use `MRT_ColumnDef` type
 - Server-side pagination wired through `manualPagination`
 - Row actions use the expected menu pattern
 
 #### Data Fetching
-Read `tanstack-query`. Check:
+Read `frontend-tanstack-query`. Check:
 - Query keys defined as factory objects in the feature's constants file — not inline arrays
 - `useQuery` / `useMutation` called from a custom hook, not directly in a component
 - Mutations invalidate the right query keys after success
 - `staleTime` is not overridden arbitrarily
 
 #### Routing
-Read `tanstack-router`. Check:
+Read `frontend-tanstack-router`. Check:
 - Route files use `createFileRoute` — all live in `src/routes/`, never inside feature folders
 - Search schemas imported from `features/[feature]/schemas/[feature].schema.ts` — never defined inline in route files
 - Search params validated via `validateSearch: zodValidator(featureSearchSchema)` — schema uses `fallback(z.number(), 1).default(1)` pattern from `@tanstack/zod-adapter`

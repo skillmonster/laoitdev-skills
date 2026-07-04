@@ -133,7 +133,9 @@ interface ElectricityListProps {
 
 ### MUI Grid
 
-**MUI Grid must use the `size` prop.** Never put breakpoint props directly on `<Grid>` (`xs`, `sm`, `md`, `lg`, `xl`). Never use the legacy `item` prop or import `Grid2`.
+**MUI v9: `Grid2` is deprecated and removed.** It has been merged into `Grid`. Always import `Grid` from `@mui/material`.
+
+**MUI Grid must use the `size` prop.** Never put breakpoint props directly on `<Grid>` (`xs`, `sm`, `md`, `lg`, `xl`). Never use the legacy `item` prop. Never import or use `Grid2`.
 
 Import from `@mui/material` — MUI v9 unified Grid, no separate `Grid2` import:
 
@@ -165,4 +167,4 @@ Prefer shared components over re-implementing:
 - `InfoRow` — label/value pair inside SectionCard
 - `OrganizationFilter` — org hierarchy filter UI
 - `ConfirmDialog` / `useConfirmDialog` — confirmation modals
-- Form components via `useAppForm` (see tanstack-form skill)
+- Form components via `useAppForm` (see frontend-tanstack-form skill)
