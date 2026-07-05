@@ -1,10 +1,170 @@
-# Form Composition (Multi-Section / Nested Forms)
+# Form Composition — Setup & Usage
 
-TanStack Form v1 has three complementary APIs for splitting large forms. All three are exported from `@/shared/components/form`.
+TanStack Form v1 composition API splits form infrastructure into two layers: shared setup files in `src/shared/components/form/` and per-feature form usage. Set up the shared layer once; all features consume it.
 
-## `withForm` — reusable section that receives the full form
+---
 
-Defined **at module level**, not inside a component. The result IS the component.
+## Folder Structure
+
+```
+src/shared/components/form/
+├── createAppForm.tsx           ← Step 1: create contexts
+├── hooks/
+│   └── useAppForm.ts           ← Step 3: wire up global hook
+├── components/
+│   ├── AppTextField.tsx        ← Step 2: field components (useFieldContext)
+│   ├── AppTextFieldNumber.tsx
+│   ├── AppSelect.tsx
+│   ├── AppAutocomplete.tsx
+│   ├── AppDatePicker.tsx
+│   ├── AppDateTimePicker.tsx
+│   ├── AppCheckbox.tsx
+│   ├── AppImageUploadField.tsx
+│   ├── AppRichTextEditor.tsx
+│   └── AppSubmitButton.tsx     ← Step 2b: form-level component (useFormContext)
+└── index.ts                    ← Step 4: barrel exports
+```
+
+---
+
+## Step 1 — Create Contexts (`createAppForm.tsx`)
+
+```tsx
+// src/shared/components/form/createAppForm.tsx
+import { createFormHookContexts } from '@tanstack/react-form'
+
+export const { fieldContext, useFieldContext, formContext, useFormContext } =
+  createFormHookContexts()
+```
+
+`fieldContext` / `formContext` are passed into `createFormHook`.  
+`useFieldContext` / `useFormContext` are used inside field/form components to read state.
+
+---
+
+## Step 2 — Create Field Components (`components/App*.tsx`)
+
+Each field component calls `useFieldContext<T>()` to get the field API.
+
+```tsx
+// src/shared/components/form/components/AppTextField.tsx
+import { useFieldContext } from '../createAppForm'
+
+export function AppTextField({ label, required, ...props }: TextFieldProps & { required?: boolean }) {
+  const field = useFieldContext<string>()
+
+  return (
+    <TextField
+      label={label}
+      value={field.state.value ?? ''}
+      onChange={(e) => field.handleChange(e.target.value)}
+      onBlur={field.handleBlur}
+      error={field.state.meta.isTouched && !field.state.meta.isValid}
+      helperText={
+        field.state.meta.isTouched ? field.state.meta.errors[0]?.message : undefined
+      }
+      required={required}
+      fullWidth
+      {...props}
+    />
+  )
+}
+```
+
+Form-level components (like a submit button) use `useFormContext()` instead:
+
+```tsx
+// src/shared/components/form/components/AppSubmitButton.tsx
+import { useFormContext } from '../createAppForm'
+
+export function AppSubmitButton({ label, loading }: { label: string; loading?: boolean }) {
+  const form = useFormContext()
+  return (
+    <form.Subscribe selector={(s) => s.isSubmitting}>
+      {(isSubmitting) => (
+        <Button type="submit" loading={loading || isSubmitting} variant="contained">
+          {label}
+        </Button>
+      )}
+    </form.Subscribe>
+  )
+}
+```
+
+---
+
+## Step 3 — Wire Up the Global Hook (`hooks/useAppForm.ts`)
+
+Register all field and form components once. This exports `useAppForm` and `withForm`.
+
+```tsx
+// src/shared/components/form/hooks/useAppForm.ts
+import { createFormHook } from '@tanstack/react-form'
+import { fieldContext, formContext } from '../createAppForm'
+import { AppTextField } from '../components/AppTextField'
+import { AppTextFieldNumber } from '../components/AppTextFieldNumber'
+import { AppSelect } from '../components/AppSelect'
+import { AppAutocomplete } from '../components/AppAutocomplete'
+import { AppDatePicker } from '../components/AppDatePicker'
+import { AppDateTimePicker } from '../components/AppDateTimePicker'
+import { AppCheckbox } from '../components/AppCheckbox'
+import { AppImageUploadField } from '../components/AppImageUploadField'
+import { AppRichTextEditor } from '../components/AppRichTextEditor'
+import { AppSubmitButton } from '../components/AppSubmitButton'
+
+export const { useAppForm, withForm } = createFormHook({
+  fieldComponents: {
+    TextField: AppTextField,
+    TextFieldNumber: AppTextFieldNumber,
+    Select: AppSelect,
+    Autocomplete: AppAutocomplete,
+    DatePicker: AppDatePicker,
+    DateTimePicker: AppDateTimePicker,
+    Checkbox: AppCheckbox,
+    ImageUploadField: AppImageUploadField,
+    RichTextEditor: AppRichTextEditor,
+  },
+  formComponents: {
+    SubmitButton: AppSubmitButton,
+  },
+  fieldContext,
+  formContext,
+})
+```
+
+To add a new field component later, create `components/AppXxx.tsx` using `useFieldContext`, then add it to `fieldComponents` here and export it from `index.ts`.
+
+---
+
+## Step 4 — Barrel Exports (`index.ts`)
+
+```ts
+// src/shared/components/form/index.ts
+export { fieldContext, formContext, useFieldContext, useFormContext } from './createAppForm'
+export { useAppForm, withForm } from './hooks/useAppForm'
+export { AppTextField } from './components/AppTextField'
+export { AppTextFieldNumber } from './components/AppTextFieldNumber'
+export { AppSelect } from './components/AppSelect'
+export { AppAutocomplete } from './components/AppAutocomplete'
+export { AppDatePicker } from './components/AppDatePicker'
+export { AppDateTimePicker } from './components/AppDateTimePicker'
+export { AppCheckbox } from './components/AppCheckbox'
+export { AppImageUploadField } from './components/AppImageUploadField'
+export { AppRichTextEditor } from './components/AppRichTextEditor'
+export { AppSubmitButton } from './components/AppSubmitButton'
+export { FormSchemaDebugger } from './components/FormSchemaDebugger'
+```
+
+All feature imports use the single alias:
+```ts
+import { useAppForm, withForm } from '@/shared/components/form'
+```
+
+---
+
+## Usage — `withForm` (reusable section receiving the full form)
+
+Defined **at module level** — not inside a component. The result IS the component.
 
 ```tsx
 // contact-section.tsx
@@ -45,87 +205,41 @@ export const ContactSection = withForm({
 <ContactSection form={form} readonly={!canEdit} />
 ```
 
-## `withFieldGroup` — reusable section that lenses into a nested object
+---
 
-Field paths inside the group are **relative to the nested type**, not the root form.
+## Usage — `useFormContext` (last resort — no prop drilling possible)
 
-```tsx
-// address-section.tsx
-import { withFieldGroup } from '@/shared/components/form'
-
-interface AddressData {
-  street: string
-  city: string
-  country: string
-}
-
-export const AddressSection = withFieldGroup<AddressData>({
-  render: ({ group }) => (
-    <group.AppForm>
-      <Stack spacing={2}>
-        <group.AppField name="street">
-          {(field) => <field.TextField label={t('common.street')} />}
-        </group.AppField>
-        <group.AppField name="city">
-          {(field) => <field.TextField label={t('common.city')} />}
-        </group.AppField>
-        <group.AppField name="country">
-          {(field) => <field.TextField label={t('common.country')} />}
-        </group.AppField>
-      </Stack>
-    </group.AppForm>
-  ),
-})
-
-// Parent form must have `homeAddress: AddressData`
-<AddressSection form={form} fields="homeAddress" />
-```
-
-Use a `FieldsMap` when field names don't match 1:1:
-```tsx
-import type { FieldsMap } from '@tanstack/react-form'
-
-<AddressSection
-  form={form}
-  fields={{ street: 'billingStreet', city: 'billingCity', country: 'billingCountry' } satisfies FieldsMap<ParentFormData, AddressData>}
-/>
-```
-
-## `useTypedAppFormContext` — read form from context without prop drilling
-
-The form is set in context by `form.AppForm` / `group.AppForm`. Options are **for type inference only — never executed at runtime**.
+Use only when a child cannot receive `form` as a prop (e.g. TanStack Router `<Outlet />`). Always prefer `withForm` first.
 
 ```tsx
-// deep-nested-field.tsx — no form prop needed
-import { useTypedAppFormContext } from '@/shared/components/form'
+import { useAppForm, useFormContext } from '@/shared/components/form'
 
-function NameField() {
-  const form = useTypedAppFormContext({
-    defaultValues: { name: '' as string },
-  })
-
+function ParentRoute() {
+  const form = useAppForm({ defaultValues: { name: '' }, onSubmit: handleSubmit })
   return (
-    <form.AppField name="name">
-      {(field) => <field.TextField label={t('feature.name')} />}
-    </form.AppField>
+    <form.AppForm>
+      <Outlet />
+    </form.AppForm>
   )
 }
 
-// Must be rendered inside a <form.AppForm> or <group.AppForm>
+function ChildRoute() {
+  const form = useFormContext()
+  return (
+    <form.AppField name="name">
+      {(field) => <field.TextField label="Name" />}
+    </form.AppField>
+  )
+}
 ```
+
+---
 
 ## When to use which
 
 | Situation | API |
 |---|---|
 | Split one form into tab/accordion sections | `withForm` |
-| Reusable nested-object block (address, contact info) shared across forms | `withFieldGroup` |
-| Deep child needs form state without prop drilling | `useTypedAppFormContext` |
-| Programmatic lensing (loop, conditional) | `useFieldGroup` hook |
-
-## Export from shared module
-
-```ts
-// src/shared/components/form/index.ts
-export { useAppForm, withForm, withFieldGroup, useTypedAppFormContext } from './hooks/useAppForm'
-```
+| Deep child needs form state, no prop possible | `useFormContext` |
+| Build a new reusable field component | `useFieldContext<T>()` in `components/` |
+| Build a new form-level component (buttons, etc.) | `useFormContext()` in `components/` |

@@ -167,4 +167,4 @@ Prefer shared components over re-implementing:
 - `InfoRow` — label/value pair inside SectionCard
 - `OrganizationFilter` — org hierarchy filter UI
 - `ConfirmDialog` / `useConfirmDialog` — confirmation modals
-- Form components via `useAppForm` (see frontend-tanstack-form skill)
+- Form components via `useAppForm` (see tanstack-form skill)

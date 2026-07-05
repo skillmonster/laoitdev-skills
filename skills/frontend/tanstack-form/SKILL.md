@@ -16,7 +16,7 @@ The project uses TanStack Form v1 with a shared `useAppForm` hook that pre-binds
 ## References
 
 Read the relevant file when you need it:
-- `references/form-composition.md` — `withForm`, `withFieldGroup`, `useTypedAppFormContext` for multi-section or nested-object forms
+- `references/form-composition.md` — full setup (folder structure, `createAppForm.tsx`, `useAppForm.ts`, `index.ts`) + `withForm` / `useFormContext` for multi-section forms
 - `references/focus-management.md` — `createOnSubmitInvalidFocusHandler`, `focusFirstInvalidField`, how it works
 - `references/filter-forms.md` — URL-synced filter forms (Accordion + search params) + reactive/cascading fields
 

@@ -32,7 +32,7 @@ Load the skills that apply to what you're auditing. Don't load all of them — l
 
 | If you see... | Read skill |
 |---|---|
-| Form components, `useForm`, field inputs | `frontend-tanstack-form` |
+| Form components, `useForm`, field inputs | `tanstack-form` |
 | Table, list view, columns | `frontend-table-mrt` |
 | `useQuery`, `useMutation`, API calls | `frontend-tanstack-query` |
 | Route files, `createFileRoute`, navigation | `frontend-tanstack-router` |
@@ -99,7 +99,7 @@ Read `frontend-theme`. Check:
   - Fix: `<Grid size={{ xs: 12, md: 6 }}>`. See: `react-standard` skill.
 
 #### Forms
-Read `frontend-tanstack-form`. Check:
+Read `tanstack-form`. Check:
 - Uses `useAppForm`, not raw `useForm`
 - Field components are `App*` variants (`AppTextField`, `AppSelect`, etc.)
 - Submit uses `<form.SubmitButton>`, not a raw MUI `<Button type="submit">`
